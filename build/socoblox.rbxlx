@@ -1,0 +1,977 @@
+<roblox version="4">
+  <Item class="ReplicatedStorage" referent="0">
+    <Properties>
+      <string name="Name">ReplicatedStorage</string>
+    </Properties>
+    <Item class="ModuleScript" referent="1">
+      <Properties>
+        <string name="Name">Constants.module</string>
+        <string name="Source"><![CDATA[local Constants = {
+	CELL_SIZE = 4, -- studs per tile
+	TWEEN_TIME = 0.15, -- seconds for client-side ghost tween
+	ROUND_DURATION = 180, -- seconds
+	NEXT_ROUND_DELAY = 6, -- seconds after win/timeout
+	GAME_NAME = "Sokoban Showdown",
+	DATASTORE_NAME = "SokobanShowdown_BestTimes_v1",
+	ORDERED_NAME_PREFIX = "SokobanShowdown_Top_Level_",
+	COLORS = {
+		Floor = Color3.fromRGB(235, 235, 235),
+		Wall = Color3.fromRGB(60, 60, 60),
+		Goal = Color3.fromRGB(255, 210, 66),
+		Box = Color3.fromRGB(181, 101, 29),
+	},
+	ADMIN_USERIDS = { -- add your userId if you want live reset
+		-- [12345678] = true,
+	},
+}
+return Constants
+]]></string>
+      </Properties>
+    </Item>
+    <Item class="ModuleScript" referent="2">
+      <Properties>
+        <string name="Name">LevelStore.module</string>
+        <string name="Source"><![CDATA[local LevelStore = {}
+
+local function V(x, y)
+	return Vector2.new(x, y)
+end
+
+local Levels = {
+	{
+		id = "Level1",
+		width = 9,
+		height = 7,
+		playerSpawn = V(1, 5),
+		walls = {
+			V(0, 0),
+			V(1, 0),
+			V(2, 0),
+			V(3, 0),
+			V(4, 0),
+			V(5, 0),
+			V(6, 0),
+			V(7, 0),
+			V(8, 0),
+			V(0, 1),
+			V(8, 1),
+			V(0, 2),
+			V(4, 2),
+			V(8, 2),
+			V(0, 3),
+			V(4, 3),
+			V(8, 3),
+			V(0, 4),
+			V(4, 4),
+			V(8, 4),
+			V(0, 5),
+			V(8, 5),
+			V(0, 6),
+			V(1, 6),
+			V(2, 6),
+			V(3, 6),
+			V(4, 6),
+			V(5, 6),
+			V(6, 6),
+			V(7, 6),
+			V(8, 6),
+		},
+		goals = { V(6, 2), V(6, 4) },
+		boxes = { V(5, 2), V(5, 4) },
+	},
+	{
+		id = "Level2",
+		width = 10,
+		height = 8,
+		playerSpawn = V(2, 6),
+		walls = (function()
+			local t = {}
+			for x = 0, 9 do
+				table.insert(t, V(x, 0))
+				table.insert(t, V(x, 7))
+			end
+			for y = 1, 6 do
+				table.insert(t, V(0, y))
+				table.insert(t, V(9, y))
+			end
+			for x = 3, 6 do
+				table.insert(t, V(x, 3))
+			end
+			return t
+		end)(),
+		goals = { V(7, 2), V(7, 5), V(2, 2) },
+		boxes = { V(6, 2), V(6, 5), V(3, 2) },
+	},
+	{
+		id = "Level3",
+		width = 8,
+		height = 8,
+		playerSpawn = V(1, 6),
+		walls = (function()
+			local t = {}
+			for x = 0, 7 do
+				table.insert(t, V(x, 0))
+				table.insert(t, V(x, 7))
+			end
+			for y = 1, 6 do
+				table.insert(t, V(0, y))
+				table.insert(t, V(7, y))
+			end
+			table.insert(t, V(4, 2))
+			table.insert(t, V(4, 3))
+			table.insert(t, V(4, 4))
+			return t
+		end)(),
+		goals = { V(6, 1), V(6, 6) },
+		boxes = { V(5, 1), V(5, 6) },
+	},
+}
+
+local currentLevelIndex = 1
+
+local function deepCopyVecList(src)
+	local out = {}
+	for i, v in ipairs(src) do
+		out[i] = Vector2.new(v.X, v.Y)
+	end
+	return out
+end
+
+local function makeLevelCopy(lv)
+	return {
+		id = lv.id,
+		width = lv.width,
+		height = lv.height,
+		playerSpawn = Vector2.new(lv.playerSpawn.X, lv.playerSpawn.Y),
+		walls = deepCopyVecList(lv.walls),
+		goals = deepCopyVecList(lv.goals),
+		boxes = deepCopyVecList(lv.boxes),
+	}
+end
+
+function LevelStore.GetLevel(idOrIndex)
+	if typeof(idOrIndex) == "string" then
+		for i, lv in ipairs(Levels) do
+			if lv.id == idOrIndex then
+				return makeLevelCopy(lv), i
+			end
+		end
+	elseif typeof(idOrIndex) == "number" then
+		local lv = Levels[idOrIndex]
+		if lv then
+			return makeLevelCopy(lv), idOrIndex
+		end
+	end
+	return makeLevelCopy(Levels[1]), 1
+end
+
+function LevelStore.ListLevels()
+	local list = {}
+	for i, lv in ipairs(Levels) do
+		list[i] = lv.id
+	end
+	return list
+end
+
+function LevelStore.LoadLevel(idOrIndex)
+	local _, idx = LevelStore.GetLevel(idOrIndex)
+	currentLevelIndex = idx
+	return Levels[idx].id
+end
+
+function LevelStore.GetCurrentLevelId()
+	return Levels[currentLevelIndex].id
+end
+
+function LevelStore.NextLevelId()
+	local nextIdx = currentLevelIndex + 1
+	if nextIdx > #Levels then
+		nextIdx = 1
+	end
+	return Levels[nextIdx].id
+end
+
+return LevelStore
+]]></string>
+      </Properties>
+    </Item>
+    <Item class="ModuleScript" referent="3">
+      <Properties>
+        <string name="Name">Remotes</string>
+        <string name="Source"><![CDATA[local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local function ensureFolder(name, parent)
+	local f = parent:FindFirstChild(name)
+	if not f then
+		f = Instance.new("Folder")
+		f.Name = name
+		f.Parent = parent
+	end
+	return f
+end
+
+local remotesFolder = ensureFolder("Remotes", ReplicatedStorage)
+
+local function getOrMake(name, className)
+	local inst = remotesFolder:FindFirstChild(name)
+	if not inst then
+		inst = Instance.new(className)
+		inst.Name = name
+		inst.Parent = remotesFolder
+	end
+	return inst
+end
+
+local api = {
+	PushBoxRequest = getOrMake("PushBoxRequest", "RemoteEvent"),
+	BoxMoved = getOrMake("BoxMoved", "RemoteEvent"),
+	RoundState = getOrMake("RoundState", "RemoteEvent"),
+	SubmitTime = getOrMake("SubmitTime", "RemoteFunction"),
+	AdminReset = getOrMake("AdminReset", "RemoteFunction"),
+	BuildLevel = getOrMake("BuildLevel", "BindableEvent"), -- server->server
+	SubmitBestTime = getOrMake("SubmitBestTime", "BindableEvent"), -- server->server
+}
+return api
+]]></string>
+      </Properties>
+    </Item>
+  </Item>
+  <Item class="ServerScriptService" referent="4">
+    <Properties>
+      <string name="Name">ServerScriptService</string>
+    </Properties>
+    <Item class="Script" referent="5">
+      <Properties>
+        <string name="Name">AntiCheat</string>
+        <token name="RunContext">0</token>
+        <string name="Source"><![CDATA[-- Lightweight monitors; core validation lives in SokobanServer
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Remotes = require(ReplicatedStorage:WaitForChild("Remotes"))
+
+local lastAt = {}
+local spikeCount = {}
+
+Remotes.PushBoxRequest.OnServerEvent:Connect(function(plr, dir)
+	local now = os.clock()
+	local last = lastAt[plr.UserId] or 0
+	local dt = now - last
+	lastAt[plr.UserId] = now
+	if dt < 0.07 then
+		spikeCount[plr.UserId] = (spikeCount[plr.UserId] or 0) + 1
+		if spikeCount[plr.UserId] % 10 == 0 then
+			warn(("[AntiCheat] %s push spam (%d in a row, dt=%.3f)"):format(plr.Name, spikeCount[plr.UserId], dt))
+		end
+	else
+		spikeCount[plr.UserId] = 0
+	end
+	if typeof(dir) ~= "Vector2" or (math.abs(dir.X) + math.abs(dir.Y) ~= 1) then
+		warn(("[AntiCheat] %s sent invalid dir: %s"):format(plr.Name, tostring(dir)))
+	end
+end)
+]]></string>
+      </Properties>
+    </Item>
+    <Item class="Script" referent="6">
+      <Properties>
+        <string name="Name">Leaderboard</string>
+        <token name="RunContext">0</token>
+        <string name="Source"><![CDATA[-- Persists per-player best times and maintains a global Top-10 using OrderedDataStore
+local DataStoreService = game:GetService("DataStoreService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Constants = require(ReplicatedStorage:WaitForChild("Constants"))
+local Remotes = require(ReplicatedStorage:WaitForChild("Remotes"))
+
+local BestDs = DataStoreService:GetDataStore(Constants.DATASTORE_NAME)
+local function OrderedFor(levelId)
+	return DataStoreService:GetOrderedDataStore(Constants.ORDERED_NAME_PREFIX .. tostring(levelId))
+end
+
+local lastSaveAt = {}
+
+local function saveBestTime(plr, ms, levelId)
+	local now = os.time()
+	if lastSaveAt[plr.UserId] and now - lastSaveAt[plr.UserId] < 10 then
+		return
+	end
+	lastSaveAt[plr.UserId] = now
+
+	local key = ("p_%d"):format(plr.UserId)
+	local best
+	local ok1, err1 = pcall(function()
+		best = BestDs:GetAsync(key)
+	end)
+	if not ok1 then
+		warn("[Leaderboard] GetAsync failed:", err1)
+	end
+	if not best or ms < (best and best.ms or math.huge) then
+		local ok2, err2 = pcall(function()
+			BestDs:SetAsync(key, { ms = ms, levelId = levelId, when = now, name = plr.Name })
+		end)
+		if not ok2 then
+			warn("[Leaderboard] SetAsync failed:", err2)
+		end
+	end
+
+	local ods = OrderedFor(levelId)
+	local ok3, err3 = pcall(function()
+		ods:SetAsync(("u_%d"):format(plr.UserId), -ms)
+	end)
+	if not ok3 then
+		warn("[Leaderboard] Ordered SetAsync failed:", err3)
+	end
+
+	task.spawn(function()
+		local top = {}
+		local ok4, pages = pcall(function()
+			return ods:GetSortedAsync(true, 10)
+		end)
+		if ok4 and pages then
+			local items = pages:GetCurrentPage()
+			for i, entry in ipairs(items) do
+				local uid = tonumber(string.match(entry.key, "u_(%d+)")) or 0
+				local name = ("User %d"):format(uid)
+				for _, p in ipairs(game:GetService("Players"):GetPlayers()) do
+					if p.UserId == uid then
+						name = p.Name
+						break
+					end
+				end
+				top[i] = { rank = i, name = name, ms = -entry.value }
+			end
+		end
+		Remotes.RoundState:FireAllClients("Leaderboard", top)
+	end)
+end
+
+Remotes.SubmitBestTime.Event:Connect(function(plr, ms, levelId)
+	if typeof(ms) ~= "number" or typeof(levelId) ~= "string" then
+		return
+	end
+	saveBestTime(plr, ms, levelId)
+end)
+]]></string>
+      </Properties>
+    </Item>
+    <Item class="Script" referent="7">
+      <Properties>
+        <string name="Name">SokobanServer</string>
+        <token name="RunContext">0</token>
+        <string name="Source"><![CDATA[-- Core server-authoritative game logic: grid state, validation, rounds, timer, broadcasting
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Constants = require(ReplicatedStorage:WaitForChild("Constants"))
+local LevelStore = require(ReplicatedStorage:WaitForChild("LevelStore"))
+local Remotes = require(ReplicatedStorage:WaitForChild("Remotes"))
+
+-- ===== State =====
+local currentLevelId = LevelStore.GetCurrentLevelId()
+local RoundActive = false
+local RoundStartTime = 0
+
+-- Grid state
+local width, height
+local wallsSet = {} -- key "x,y" -> true
+local goalsSet = {} -- key "x,y" -> true
+local boxesById = {} -- id -> Vector2
+local boxAtCell = {} -- key "x,y" -> id
+local playerCell = {} -- userId -> Vector2
+local lastPushAt = {} -- userId -> os.clock() guard (anti-spam)
+
+local function key(x, y)
+	return ("%d,%d"):format(x, y)
+end
+local function inBounds(v)
+	return v.X >= 0 and v.X < width and v.Y >= 0 and v.Y < height
+end
+
+local function isWall(v)
+	return wallsSet[key(v.X, v.Y)] == true
+end
+local function hasBox(v)
+	return boxAtCell[key(v.X, v.Y)] ~= nil
+end
+
+local function loadLevelState(levelId)
+	local lvl = LevelStore.GetLevel(levelId)
+	currentLevelId = lvl.id
+	width, height = lvl.width, lvl.height
+	wallsSet, goalsSet, boxesById, boxAtCell = {}, {}, {}, {}
+
+	for _, w in ipairs(lvl.walls) do
+		wallsSet[key(w.X, w.Y)] = true
+	end
+	for _, g in ipairs(lvl.goals) do
+		goalsSet[key(g.X, g.Y)] = true
+	end
+	for i, b in ipairs(lvl.boxes) do
+		boxesById[i] = Vector2.new(b.X, b.Y)
+		boxAtCell[key(b.X, b.Y)] = i
+	end
+	for _, plr in ipairs(Players:GetPlayers()) do
+		playerCell[plr.UserId] = Vector2.new(lvl.playerSpawn.X, lvl.playerSpawn.Y)
+	end
+end
+
+local function broadcastInit()
+	Remotes.RoundState:FireAllClients("Init", {
+		levelId = currentLevelId,
+		duration = Constants.ROUND_DURATION,
+		startEpoch = os.time(),
+	})
+end
+
+local function startRound()
+	RoundActive = true
+	RoundStartTime = os.clock()
+	broadcastInit()
+end
+
+local function endRound(reason, winnerPlr, elapsedMs)
+	RoundActive = false
+	if winnerPlr and elapsedMs then
+		Remotes.RoundState:FireAllClients("RoundEnd", {
+			reason = reason,
+			winner = winnerPlr.Name,
+			ms = elapsedMs,
+			levelId = currentLevelId,
+		})
+		Remotes.SubmitBestTime:Fire(winnerPlr, elapsedMs, currentLevelId)
+	else
+		Remotes.RoundState:FireAllClients(
+			"RoundEnd",
+			{ reason = reason, winner = nil, ms = nil, levelId = currentLevelId }
+		)
+	end
+
+	task.delay(Constants.NEXT_ROUND_DELAY, function()
+		local nextId = LevelStore.NextLevelId()
+		LevelStore.LoadLevel(nextId)
+		loadLevelState(nextId)
+		Remotes.BuildLevel:Fire(nextId)
+		startRound()
+	end)
+end
+
+local function solved()
+	for k, _ in pairs(goalsSet) do
+		local x, y = string.match(k, "(-?%d+),(-?%d+)")
+		local id = boxAtCell[key(tonumber(x), tonumber(y))]
+		if not id then
+			return false
+		end
+	end
+	return true
+end
+
+task.defer(function()
+	loadLevelState(currentLevelId)
+	Remotes.BuildLevel:Fire(currentLevelId)
+	startRound()
+end)
+
+task.spawn(function()
+	while true do
+		task.wait(0.25)
+		if RoundActive then
+			local left = Constants.ROUND_DURATION - (os.clock() - RoundStartTime)
+			if left <= 0 then
+				endRound("timeout", nil, nil)
+			else
+				Remotes.RoundState:FireAllClients("Timer", { tLeft = math.floor(left) })
+			end
+		end
+	end
+end)
+
+Remotes.AdminReset.OnServerInvoke = function(plr, optLevelIdOrIndex)
+	if RunService:IsStudio() or require(ReplicatedStorage.Constants).ADMIN_USERIDS[plr.UserId] then
+		local id = optLevelIdOrIndex or LevelStore.GetCurrentLevelId()
+		LevelStore.LoadLevel(id)
+		loadLevelState(id)
+		Remotes.BuildLevel:Fire(id)
+		startRound()
+		return true, ("Level reset to %s"):format(id)
+	end
+	return false, "Not authorized"
+end
+
+Players.PlayerAdded:Connect(function(plr)
+	local lvl = LevelStore.GetLevel(currentLevelId)
+	playerCell[plr.UserId] = Vector2.new(lvl.playerSpawn.X, lvl.playerSpawn.Y)
+end)
+
+Players.PlayerRemoving:Connect(function(plr)
+	playerCell[plr.UserId] = nil
+	lastPushAt[plr.UserId] = nil
+end)
+
+local allowedDirs = {
+	["1,0"] = Vector2.new(1, 0),
+	["-1,0"] = Vector2.new(-1, 0),
+	["0,1"] = Vector2.new(0, 1),
+	["0,-1"] = Vector2.new(0, -1),
+}
+
+local function tryMove(plr, dir)
+	if not RoundActive then
+		return false, "round-not-active"
+	end
+
+	local now = os.clock()
+	local last = lastPushAt[plr.UserId] or 0
+	if now - last < 0.1 then
+		return false, "too-fast"
+	end
+	lastPushAt[plr.UserId] = now
+
+	local dirKey = key(dir.X, dir.Y)
+	if not allowedDirs[dirKey] then
+		return false, "bad-dir"
+	end
+
+	local pCell = playerCell[plr.UserId]
+	if not pCell then
+		return false, "no-player-cell"
+	end
+
+	local target = pCell + dir
+	if not inBounds(target) or isWall(target) then
+		return false, "blocked"
+	end
+
+	if hasBox(target) then
+		local nextCell = target + dir
+		if not inBounds(nextCell) or isWall(nextCell) or hasBox(nextCell) then
+			return false, "box-blocked"
+		end
+		local boxId = boxAtCell[key(target.X, target.Y)]
+		boxAtCell[key(target.X, target.Y)] = nil
+		boxAtCell[key(nextCell.X, nextCell.Y)] = boxId
+		boxesById[boxId] = Vector2.new(nextCell.X, nextCell.Y)
+		playerCell[plr.UserId] = Vector2.new(target.X, target.Y)
+
+		local boxPart = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild(("Box_%d"):format(boxId))
+		if boxPart then
+			local cs = Constants.CELL_SIZE
+			boxPart.CFrame = CFrame.new(Vector3.new(nextCell.X * cs, 1, nextCell.Y * cs))
+		end
+
+		Remotes.BoxMoved:FireAllClients({
+			boxId = boxId,
+			toCell = nextCell,
+			playerUserId = plr.UserId,
+			playerToCell = playerCell[plr.UserId],
+			tween = Constants.TWEEN_TIME,
+		})
+
+		if solved() then
+			local elapsedMs = math.floor((os.clock() - RoundStartTime) * 1000)
+			endRound("solved", plr, elapsedMs)
+		end
+
+		return true, "pushed"
+	else
+		playerCell[plr.UserId] = Vector2.new(target.X, target.Y)
+		return true, "stepped"
+	end
+end
+
+Remotes.PushBoxRequest.OnServerEvent:Connect(function(plr, dir)
+	local ok, msg = pcall(function()
+		return tryMove(plr, dir)
+	end)
+	if not ok then
+		warn("[Sokoban] error in tryMove:", msg)
+	end
+end)
+
+Remotes.SubmitTime.OnServerInvoke = function(_, msClient, levelId)
+	if not msClient or typeof(msClient) ~= "number" then
+		return false, "bad-ms"
+	end
+	if not levelId or levelId ~= currentLevelId then
+		return false, "bad-level"
+	end
+	return true, "queued"
+end
+]]></string>
+      </Properties>
+    </Item>
+  </Item>
+  <Item class="StarterGui" referent="8">
+    <Properties>
+      <string name="Name">StarterGui</string>
+    </Properties>
+    <Item class="ModuleScript" referent="9">
+      <Properties>
+        <string name="Name">HUD.gui</string>
+        <string name="Source"><![CDATA[-- Creates minimal HUD (ScreenGui + labels + admin reset button)
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local Remotes = require(ReplicatedStorage:WaitForChild("Remotes"))
+
+local player = Players.LocalPlayer
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "HUDGui"
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
+
+local timerLabel = Instance.new("TextLabel")
+timerLabel.Name = "TimerLabel"
+timerLabel.Size = UDim2.new(0, 200, 0, 40)
+timerLabel.Position = UDim2.new(0, 12, 0, 12)
+timerLabel.BackgroundTransparency = 0.35
+timerLabel.TextScaled = true
+timerLabel.Font = Enum.Font.GothamBold
+timerLabel.Text = "⏱ 180s"
+timerLabel.Parent = gui
+
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Name = "StatusLabel"
+statusLabel.Size = UDim2.new(0, 400, 0, 120)
+statusLabel.Position = UDim2.new(0, 12, 0, 58)
+statusLabel.BackgroundTransparency = 0.35
+statusLabel.TextWrapped = true
+statusLabel.TextXAlignment = Enum.TextXAlignment.Left
+statusLabel.TextYAlignment = Enum.TextYAlignment.Top
+statusLabel.Font = Enum.Font.Gotham
+statusLabel.TextSize = 16
+statusLabel.Text = "Welcome to Sokoban Showdown!"
+statusLabel.Parent = gui
+
+if RunService:IsStudio() then
+	local resetBtn = Instance.new("TextButton")
+	resetBtn.Name = "ResetBtn"
+	resetBtn.Text = "Reset Level"
+	resetBtn.Size = UDim2.new(0, 140, 0, 40)
+	resetBtn.Position = UDim2.new(0, 12, 0, 184)
+	resetBtn.Parent = gui
+	resetBtn.MouseButton1Click:Connect(function()
+		local ok, msg = Remotes.AdminReset:InvokeServer()
+		statusLabel.Text = ok and ("[Admin] " .. (msg or "reset ok")) or ("[Admin] " .. (msg or "reset failed"))
+	end)
+
+	local nextBtn = Instance.new("TextButton")
+	nextBtn.Name = "NextBtn"
+	nextBtn.Text = "Next Level"
+	nextBtn.Size = UDim2.new(0, 140, 0, 40)
+	nextBtn.Position = UDim2.new(0, 160, 0, 184)
+	nextBtn.Parent = gui
+	nextBtn.MouseButton1Click:Connect(function()
+		local ok, msg = Remotes.AdminReset:InvokeServer()
+		statusLabel.Text = ok and ("[Admin] " .. (msg or "reset ok")) or ("[Admin] " .. (msg or "reset failed"))
+	end)
+end
+]]></string>
+      </Properties>
+    </Item>
+    <Item class="ModuleScript" referent="10">
+      <Properties>
+        <string name="Name">SocialShare.gui</string>
+        <string name="Source"><![CDATA[-- GUI + SocialService share (with fallback)
+local Players = game:GetService("Players")
+local SocialService = game:GetService("SocialService")
+
+local player = Players.LocalPlayer
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "SocialShareGui"
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
+
+local btn = Instance.new("TextButton")
+btn.Name = "ShareButton"
+btn.Text = "Share Win"
+btn.Visible = false
+btn.Size = UDim2.new(0, 160, 0, 44)
+btn.Position = UDim2.new(1, -172, 1, -56)
+btn.BackgroundTransparency = 0.2
+btn.Font = Enum.Font.GothamBold
+btn.TextScaled = true
+btn.Parent = gui
+
+local fallbackFrame = Instance.new("Frame")
+fallbackFrame.Visible = false
+fallbackFrame.Size = UDim2.new(0, 420, 0, 100)
+fallbackFrame.Position = UDim2.new(0.5, -210, 0.5, -50)
+fallbackFrame.Parent = gui
+
+local msg = Instance.new("TextBox")
+msg.Size = UDim2.new(1, -20, 1, -20)
+msg.Position = UDim2.new(0, 10, 0, 10)
+msg.ClearTextOnFocus = false
+msg.TextWrapped = true
+msg.Text = "I won in Sokoban Showdown!"
+msg.Parent = fallbackFrame
+
+local function doShare()
+	local canInvite = false
+	pcall(function()
+		canInvite = SocialService:CanSendGameInviteAsync(player)
+	end)
+	if canInvite then
+		pcall(function()
+			SocialService:PromptGameInvite(player)
+		end)
+	else
+		fallbackFrame.Visible = true
+		msg.Text = gui:GetAttribute("ShareText") or "I won in Sokoban Showdown! Beat my time!"
+	end
+end
+
+btn.MouseButton1Click:Connect(function()
+	doShare()
+	btn.Visible = false
+end)
+]]></string>
+      </Properties>
+    </Item>
+  </Item>
+  <Item class="StarterPlayer" referent="11">
+    <Properties>
+      <string name="Name">StarterPlayer</string>
+    </Properties>
+    <Item class="StarterPlayerScripts" referent="12">
+      <Properties>
+        <string name="Name">StarterPlayerScripts</string>
+      </Properties>
+      <Item class="LocalScript" referent="13">
+        <Properties>
+          <string name="Name">ClientController</string>
+          <string name="Source"><![CDATA[-- Handles input, sends push requests, visual tween via ghost clones, HUD hooks
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local ContextActionService = game:GetService("ContextActionService")
+
+local Constants = require(ReplicatedStorage:WaitForChild("Constants"))
+local Remotes = require(ReplicatedStorage:WaitForChild("Remotes"))
+
+local player = Players.LocalPlayer
+
+local function cellToWorld(cell)
+	local cs = Constants.CELL_SIZE
+	return Vector3.new(cell.X * cs, 1, cell.Y * cs)
+end
+
+local function getBoxPart(id)
+	local map = workspace:FindFirstChild("Map")
+	if not map then
+		return nil
+	end
+	return map:FindFirstChild(("Box_%d"):format(id))
+end
+
+local function tweenBoxTo(id, toCell, duration)
+	local real = getBoxPart(id)
+	if not real then
+		return
+	end
+
+	local ghost = real:Clone()
+	ghost.Name = ("Box_%d_Ghost"):format(id)
+	ghost.Parent = workspace
+	ghost.Anchored = true
+	ghost.CanCollide = false
+
+	real.LocalTransparencyModifier = 1
+
+	ghost.CFrame = real.CFrame
+	local targetCF = CFrame.new(cellToWorld(toCell))
+	local tw = TweenService:Create(
+		ghost,
+		TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+		{ CFrame = targetCF }
+	)
+	tw:Play()
+	tw.Completed:Connect(function()
+		if ghost then
+			ghost:Destroy()
+		end
+		if real then
+			real.LocalTransparencyModifier = 0
+		end
+	end)
+end
+
+local function toDir(inputState, inputObj)
+	if inputState ~= Enum.UserInputState.Begin then
+		return
+	end
+	local key = inputObj.KeyCode
+	local dir
+	if key == Enum.KeyCode.W or key == Enum.KeyCode.Up then
+		dir = Vector2.new(0, -1)
+	elseif key == Enum.KeyCode.S or key == Enum.KeyCode.Down then
+		dir = Vector2.new(0, 1)
+	elseif key == Enum.KeyCode.A or key == Enum.KeyCode.Left then
+		dir = Vector2.new(-1, 0)
+	elseif key == Enum.KeyCode.D or key == Enum.KeyCode.Right then
+		dir = Vector2.new(1, 0)
+	end
+	if dir then
+		Remotes.PushBoxRequest:FireServer(dir)
+	end
+end
+
+ContextActionService:BindAction(
+	"SokobanMove",
+	toDir,
+	false,
+	Enum.KeyCode.W,
+	Enum.KeyCode.A,
+	Enum.KeyCode.S,
+	Enum.KeyCode.D,
+	Enum.KeyCode.Up,
+	Enum.KeyCode.Down,
+	Enum.KeyCode.Left,
+	Enum.KeyCode.Right
+)
+
+Remotes.RoundState.OnClientEvent:Connect(function(kind, payload)
+	if kind == "Timer" then
+		local gui = player:FindFirstChildOfClass("PlayerGui")
+		if gui then
+			local hud = gui:FindFirstChild("HUDGui")
+			if hud and hud:FindFirstChild("TimerLabel") then
+				hud.TimerLabel.Text = ("⏱ %ds"):format(payload.tLeft or 0)
+			end
+		end
+	elseif kind == "RoundEnd" then
+		local gui = player:FindFirstChildOfClass("PlayerGui")
+		if gui then
+			local share = gui:FindFirstChild("SocialShareGui")
+			if share and share:FindFirstChild("ShareButton") then
+				share.ShareButton.Visible = true
+				share:SetAttribute(
+					"ShareText",
+					("I won %s on %s in %.2fs! Come beat my time!"):format(
+						payload.levelId or "",
+						Constants.GAME_NAME,
+						(payload.ms or 0) / 1000
+					)
+				)
+			end
+		end
+	elseif kind == "Leaderboard" then
+		local gui = player:FindFirstChildOfClass("PlayerGui")
+		if gui then
+			local hud = gui:FindFirstChild("HUDGui")
+			if hud and hud:FindFirstChild("StatusLabel") then
+				local lines = {}
+				for _, row in ipairs(payload or {}) do
+					table.insert(lines, ("%d) %s — %.2fs"):format(row.rank, row.name, (row.ms or 0) / 1000))
+				end
+				hud.StatusLabel.Text = (#lines > 0 and table.concat(lines, "\n")) or "No records yet"
+			end
+		end
+	end
+end)
+
+Remotes.BoxMoved.OnClientEvent:Connect(function(data)
+	if typeof(data) ~= "table" then
+		return
+	end
+	tweenBoxTo(data.boxId, data.toCell, data.tween or Constants.TWEEN_TIME)
+end)
+]]></string>
+        </Properties>
+      </Item>
+    </Item>
+  </Item>
+  <Item class="Workspace" referent="14">
+    <Properties>
+      <string name="Name">Workspace</string>
+    </Properties>
+    <Item class="Script" referent="15">
+      <Properties>
+        <string name="Name">Setup</string>
+        <token name="RunContext">0</token>
+        <string name="Source"><![CDATA[-- Builds the map from the current Level using LevelStore. Listens to BuildLevel event.
+local CollectionService = game:GetService("CollectionService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Constants = require(ReplicatedStorage:WaitForChild("Constants"))
+local LevelStore = require(ReplicatedStorage:WaitForChild("LevelStore"))
+local Remotes = require(ReplicatedStorage:WaitForChild("Remotes"))
+
+local MapFolder = Instance.new("Folder")
+MapFolder.Name = "Map"
+MapFolder.Parent = workspace
+
+local function cellToWorld(cell: Vector2): Vector3
+	local cs = Constants.CELL_SIZE
+	return Vector3.new(cell.X * cs, 1, cell.Y * cs)
+end
+
+local function clearMap()
+	for _, child in ipairs(MapFolder:GetChildren()) do
+		child:Destroy()
+	end
+end
+
+local function makePart(name, size, color)
+	local p = Instance.new("Part")
+	p.Anchored = true
+	p.CanCollide = false
+	p.Size = size
+	p.Color = color
+	p.Name = name
+	p.TopSurface = Enum.SurfaceType.Smooth
+	p.BottomSurface = Enum.SurfaceType.Smooth
+	return p
+end
+
+local function buildLevel(levelId)
+	clearMap()
+	local lvl = LevelStore.GetLevel(levelId)
+
+	-- Floor
+	local floorSize = Vector3.new(lvl.width * Constants.CELL_SIZE, 1, lvl.height * Constants.CELL_SIZE)
+	local floor = makePart("Floor", floorSize, Constants.COLORS.Floor)
+	floor.CFrame =
+		CFrame.new(((lvl.width - 1) * Constants.CELL_SIZE) / 2, 0.5, ((lvl.height - 1) * Constants.CELL_SIZE) / 2)
+	floor.Parent = MapFolder
+
+	-- Walls
+	for _, w in ipairs(lvl.walls) do
+		local wall = makePart("Wall", Vector3.new(Constants.CELL_SIZE, 3, Constants.CELL_SIZE), Constants.COLORS.Wall)
+		wall.CFrame = CFrame.new(cellToWorld(w))
+		wall.Parent = MapFolder
+		CollectionService:AddTag(wall, "Wall")
+	end
+
+	-- Goals
+	for _, g in ipairs(lvl.goals) do
+		local goal = makePart("Goal", Vector3.new(Constants.CELL_SIZE, 0.2, Constants.CELL_SIZE), Constants.COLORS.Goal)
+		goal.CFrame = CFrame.new(cellToWorld(g))
+		goal.Parent = MapFolder
+		CollectionService:AddTag(goal, "Goal")
+	end
+
+	-- Boxes
+	for i, b in ipairs(lvl.boxes) do
+		local box = makePart(
+			("Box_%d"):format(i),
+			Vector3.new(Constants.CELL_SIZE * 0.9, Constants.CELL_SIZE * 0.9, Constants.CELL_SIZE * 0.9),
+			Constants.COLORS.Box
+		)
+		box.CFrame = CFrame.new(cellToWorld(b))
+		box.Parent = MapFolder
+		CollectionService:AddTag(box, "Box")
+	end
+end
+
+-- Listen for build requests
+Remotes.BuildLevel.Event:Connect(function(levelId)
+	buildLevel(levelId)
+end)
+]]></string>
+      </Properties>
+    </Item>
+  </Item>
+</roblox>
