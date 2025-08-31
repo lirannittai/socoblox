@@ -15,7 +15,9 @@ local function cellToWorld(cell: Vector2): Vector3
 end
 
 local function clearMap()
-	for _,child in ipairs(MapFolder:GetChildren()) do child:Destroy() end
+	for _, child in ipairs(MapFolder:GetChildren()) do
+		child:Destroy()
+	end
 end
 
 local function makePart(name, size, color)
@@ -37,11 +39,12 @@ local function buildLevel(levelId)
 	-- Floor
 	local floorSize = Vector3.new(lvl.width * Constants.CELL_SIZE, 1, lvl.height * Constants.CELL_SIZE)
 	local floor = makePart("Floor", floorSize, Constants.COLORS.Floor)
-	floor.CFrame = CFrame.new(((lvl.width-1) * Constants.CELL_SIZE)/2, 0.5, ((lvl.height-1) * Constants.CELL_SIZE)/2)
+	floor.CFrame =
+		CFrame.new(((lvl.width - 1) * Constants.CELL_SIZE) / 2, 0.5, ((lvl.height - 1) * Constants.CELL_SIZE) / 2)
 	floor.Parent = MapFolder
 
 	-- Walls
-	for _,w in ipairs(lvl.walls) do
+	for _, w in ipairs(lvl.walls) do
 		local wall = makePart("Wall", Vector3.new(Constants.CELL_SIZE, 3, Constants.CELL_SIZE), Constants.COLORS.Wall)
 		wall.CFrame = CFrame.new(cellToWorld(w))
 		wall.Parent = MapFolder
@@ -49,7 +52,7 @@ local function buildLevel(levelId)
 	end
 
 	-- Goals
-	for i,g in ipairs(lvl.goals) do
+	for _, g in ipairs(lvl.goals) do
 		local goal = makePart("Goal", Vector3.new(Constants.CELL_SIZE, 0.2, Constants.CELL_SIZE), Constants.COLORS.Goal)
 		goal.CFrame = CFrame.new(cellToWorld(g))
 		goal.Parent = MapFolder
@@ -57,8 +60,12 @@ local function buildLevel(levelId)
 	end
 
 	-- Boxes
-	for i,b in ipairs(lvl.boxes) do
-		local box = makePart(("Box_%d"):format(i), Vector3.new(Constants.CELL_SIZE*0.9, Constants.CELL_SIZE*0.9, Constants.CELL_SIZE*0.9), Constants.COLORS.Box)
+	for i, b in ipairs(lvl.boxes) do
+		local box = makePart(
+			("Box_%d"):format(i),
+			Vector3.new(Constants.CELL_SIZE * 0.9, Constants.CELL_SIZE * 0.9, Constants.CELL_SIZE * 0.9),
+			Constants.COLORS.Box
+		)
 		box.CFrame = CFrame.new(cellToWorld(b))
 		box.Parent = MapFolder
 		CollectionService:AddTag(box, "Box")

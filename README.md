@@ -1,4 +1,29 @@
 # Sokoban Showdown (Roblox)
+
+This repository contains the full Luau source code for the Sokoban Showdown game.
+
+## How to Open the Project
+
+1.  **Install Roblox Studio:** If you don't have it already, download and install [Roblox Studio](https://www.roblox.com/create).
+2.  **Open the Place File:**
+    *   Open Roblox Studio.
+    *   Go to **File > Open from File...**.
+    *   Navigate to the `build` directory in this repository.
+    *   Select the `socoblox.rbxlx` file and click **Open**.
+
+The project should now be open in Roblox Studio, and you should be able to run and edit the game.
+
+## Development
+
+This project uses `rojo` to manage the codebase. The Luau source code is organized into directories that map to Roblox services.
+
+### Original README Content
+
+The following is the original content of the README file, which contains information about the project's structure and how to set it up manually.
+
+---
+
+# Sokoban Showdown (Roblox)
 This package contains the full Lua source + placement map for Roblox Studio.
 
 ## Where to paste in Roblox Studio
@@ -37,4 +62,3 @@ git push -u origin main
 git remote add origin https://github.com/<USER>/<REPO>.git
 git push -u origin main
 ```
-

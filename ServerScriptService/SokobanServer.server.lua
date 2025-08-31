@@ -3,9 +3,9 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Constants   = require(ReplicatedStorage:WaitForChild("Constants"))
-local LevelStore  = require(ReplicatedStorage:WaitForChild("LevelStore"))
-local Remotes     = require(ReplicatedStorage:WaitForChild("Remotes"))
+local Constants = require(ReplicatedStorage:WaitForChild("Constants"))
+local LevelStore = require(ReplicatedStorage:WaitForChild("LevelStore"))
+local Remotes = require(ReplicatedStorage:WaitForChild("Remotes"))
 
 -- ===== State =====
 local currentLevelId = LevelStore.GetCurrentLevelId()
@@ -14,20 +14,26 @@ local RoundStartTime = 0
 
 -- Grid state
 local width, height
-local wallsSet = {}           -- key "x,y" -> true
-local goalsSet = {}           -- key "x,y" -> true
-local boxesById = {}          -- id -> Vector2
-local boxAtCell = {}          -- key "x,y" -> id
-local playerCell = {}         -- userId -> Vector2
-local lastPushAt = {}         -- userId -> os.clock() guard (anti-spam)
+local wallsSet = {} -- key "x,y" -> true
+local goalsSet = {} -- key "x,y" -> true
+local boxesById = {} -- id -> Vector2
+local boxAtCell = {} -- key "x,y" -> id
+local playerCell = {} -- userId -> Vector2
+local lastPushAt = {} -- userId -> os.clock() guard (anti-spam)
 
-local function key(x,y) return ("%d,%d"):format(x,y) end
+local function key(x, y)
+	return ("%d,%d"):format(x, y)
+end
 local function inBounds(v)
 	return v.X >= 0 and v.X < width and v.Y >= 0 and v.Y < height
 end
 
-local function isWall(v) return wallsSet[key(v.X,v.Y)] == true end
-local function hasBox(v) return boxAtCell[key(v.X,v.Y)] ~= nil end
+local function isWall(v)
+	return wallsSet[key(v.X, v.Y)] == true
+end
+local function hasBox(v)
+	return boxAtCell[key(v.X, v.Y)] ~= nil
+end
 
 local function loadLevelState(levelId)
 	local lvl = LevelStore.GetLevel(levelId)
@@ -35,13 +41,17 @@ local function loadLevelState(levelId)
 	width, height = lvl.width, lvl.height
 	wallsSet, goalsSet, boxesById, boxAtCell = {}, {}, {}, {}
 
-	for _,w in ipairs(lvl.walls) do wallsSet[key(w.X,w.Y)] = true end
-	for _,g in ipairs(lvl.goals) do goalsSet[key(g.X,g.Y)] = true end
-	for i,b in ipairs(lvl.boxes) do
-		boxesById[i] = Vector2.new(b.X,b.Y)
-		boxAtCell[key(b.X,b.Y)] = i
+	for _, w in ipairs(lvl.walls) do
+		wallsSet[key(w.X, w.Y)] = true
 	end
-	for _,plr in ipairs(Players:GetPlayers()) do
+	for _, g in ipairs(lvl.goals) do
+		goalsSet[key(g.X, g.Y)] = true
+	end
+	for i, b in ipairs(lvl.boxes) do
+		boxesById[i] = Vector2.new(b.X, b.Y)
+		boxAtCell[key(b.X, b.Y)] = i
+	end
+	for _, plr in ipairs(Players:GetPlayers()) do
 		playerCell[plr.UserId] = Vector2.new(lvl.playerSpawn.X, lvl.playerSpawn.Y)
 	end
 end
@@ -64,11 +74,17 @@ local function endRound(reason, winnerPlr, elapsedMs)
 	RoundActive = false
 	if winnerPlr and elapsedMs then
 		Remotes.RoundState:FireAllClients("RoundEnd", {
-			reason = reason, winner = winnerPlr.Name, ms = elapsedMs, levelId = currentLevelId
+			reason = reason,
+			winner = winnerPlr.Name,
+			ms = elapsedMs,
+			levelId = currentLevelId,
 		})
 		Remotes.SubmitBestTime:Fire(winnerPlr, elapsedMs, currentLevelId)
 	else
-		Remotes.RoundState:FireAllClients("RoundEnd", { reason = reason, winner = nil, ms = nil, levelId = currentLevelId })
+		Remotes.RoundState:FireAllClients(
+			"RoundEnd",
+			{ reason = reason, winner = nil, ms = nil, levelId = currentLevelId }
+		)
 	end
 
 	task.delay(Constants.NEXT_ROUND_DELAY, function()
@@ -81,10 +97,12 @@ local function endRound(reason, winnerPlr, elapsedMs)
 end
 
 local function solved()
-	for k,_ in pairs(goalsSet) do
-		local x,y = string.match(k, "(-?%d+),(-?%d+)")
+	for k, _ in pairs(goalsSet) do
+		local x, y = string.match(k, "(-?%d+),(-?%d+)")
 		local id = boxAtCell[key(tonumber(x), tonumber(y))]
-		if not id then return false end
+		if not id then
+			return false
+		end
 	end
 	return true
 end
@@ -110,7 +128,7 @@ task.spawn(function()
 end)
 
 Remotes.AdminReset.OnServerInvoke = function(plr, optLevelIdOrIndex)
-	if RunService:IsStudio() or (require(ReplicatedStorage.Constants).ADMIN_USERIDS[plr.UserId]) then
+	if RunService:IsStudio() or require(ReplicatedStorage.Constants).ADMIN_USERIDS[plr.UserId] then
 		local id = optLevelIdOrIndex or LevelStore.GetCurrentLevelId()
 		LevelStore.LoadLevel(id)
 		loadLevelState(id)
@@ -132,14 +150,16 @@ Players.PlayerRemoving:Connect(function(plr)
 end)
 
 local allowedDirs = {
-	["1,0"] = Vector2.new(1,0),
-	["-1,0"] = Vector2.new(-1,0),
-	["0,1"] = Vector2.new(0,1),
-	["0,-1"] = Vector2.new(0,-1),
+	["1,0"] = Vector2.new(1, 0),
+	["-1,0"] = Vector2.new(-1, 0),
+	["0,1"] = Vector2.new(0, 1),
+	["0,-1"] = Vector2.new(0, -1),
 }
 
 local function tryMove(plr, dir)
-	if not RoundActive then return false, "round-not-active" end
+	if not RoundActive then
+		return false, "round-not-active"
+	end
 
 	local now = os.clock()
 	local last = lastPushAt[plr.UserId] or 0
@@ -149,10 +169,14 @@ local function tryMove(plr, dir)
 	lastPushAt[plr.UserId] = now
 
 	local dirKey = key(dir.X, dir.Y)
-	if not allowedDirs[dirKey] then return false, "bad-dir" end
+	if not allowedDirs[dirKey] then
+		return false, "bad-dir"
+	end
 
 	local pCell = playerCell[plr.UserId]
-	if not pCell then return false, "no-player-cell" end
+	if not pCell then
+		return false, "no-player-cell"
+	end
 
 	local target = pCell + dir
 	if not inBounds(target) or isWall(target) then
@@ -163,17 +187,17 @@ local function tryMove(plr, dir)
 		local nextCell = target + dir
 		if not inBounds(nextCell) or isWall(nextCell) or hasBox(nextCell) then
 			return false, "box-blocked"
-		}
-		local boxId = boxAtCell[key(target.X,target.Y)]
-		boxAtCell[key(target.X,target.Y)] = nil
-		boxAtCell[key(nextCell.X,nextCell.Y)] = boxId
+		end
+		local boxId = boxAtCell[key(target.X, target.Y)]
+		boxAtCell[key(target.X, target.Y)] = nil
+		boxAtCell[key(nextCell.X, nextCell.Y)] = boxId
 		boxesById[boxId] = Vector2.new(nextCell.X, nextCell.Y)
 		playerCell[plr.UserId] = Vector2.new(target.X, target.Y)
 
 		local boxPart = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild(("Box_%d"):format(boxId))
 		if boxPart then
 			local cs = Constants.CELL_SIZE
-			boxPart.CFrame = CFrame.new(Vector3.new(nextCell.X*cs, 1, nextCell.Y*cs))
+			boxPart.CFrame = CFrame.new(Vector3.new(nextCell.X * cs, 1, nextCell.Y * cs))
 		end
 
 		Remotes.BoxMoved:FireAllClients({
@@ -185,7 +209,7 @@ local function tryMove(plr, dir)
 		})
 
 		if solved() then
-			local elapsedMs = math.floor( (os.clock() - RoundStartTime) * 1000 )
+			local elapsedMs = math.floor((os.clock() - RoundStartTime) * 1000)
 			endRound("solved", plr, elapsedMs)
 		end
 
@@ -197,14 +221,20 @@ local function tryMove(plr, dir)
 end
 
 Remotes.PushBoxRequest.OnServerEvent:Connect(function(plr, dir)
-	local ok, msg = pcall(function() return tryMove(plr, dir) end)
+	local ok, msg = pcall(function()
+		return tryMove(plr, dir)
+	end)
 	if not ok then
 		warn("[Sokoban] error in tryMove:", msg)
 	end
 end)
 
-Remotes.SubmitTime.OnServerInvoke = function(plr, msClient, levelId)
-	if not msClient or typeof(msClient)~="number" then return false, "bad-ms" end
-	if not levelId or levelId ~= currentLevelId then return false, "bad-level" end
+Remotes.SubmitTime.OnServerInvoke = function(_, msClient, levelId)
+	if not msClient or typeof(msClient) ~= "number" then
+		return false, "bad-ms"
+	end
+	if not levelId or levelId ~= currentLevelId then
+		return false, "bad-level"
+	end
 	return true, "queued"
 end
