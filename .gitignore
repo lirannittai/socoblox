@@ -1,6 +1,17 @@
+# Archives / temporary
 *.zip
+.DS_Store
+Thumbs.db
+
+# Roblox artifacts you might export later
 *.rbxl
 *.rbxlx
 *.rbxm
-Thumbs.db
-.DS_Store
+
+# IDE/Editor
+.vscode/
+.idea/
+
+# Python temp (if you ever run scripts)
+__pycache__/
+*.pyc
