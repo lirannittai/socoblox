@@ -18,7 +18,7 @@ Remotes.PushBoxRequest.OnServerEvent:Connect(function(plr, dir)
 	else
 		spikeCount[plr.UserId] = 0
 	end
-	if typeof(dir)~="Vector2" or (math.abs(dir.X)+math.abs(dir.Y) ~= 1) then
+	if typeof(dir) ~= "Vector2" or (math.abs(dir.X) + math.abs(dir.Y) ~= 1) then
 		warn(("[AntiCheat] %s sent invalid dir: %s"):format(plr.Name, tostring(dir)))
 	end
 end)

@@ -8,9 +8,9 @@ local Constants = {
 	ORDERED_NAME_PREFIX = "SokobanShowdown_Top_Level_",
 	COLORS = {
 		Floor = Color3.fromRGB(235, 235, 235),
-		Wall  = Color3.fromRGB(60,  60,  60),
-		Goal  = Color3.fromRGB(255, 210, 66),
-		Box   = Color3.fromRGB(181, 101, 29),
+		Wall = Color3.fromRGB(60, 60, 60),
+		Goal = Color3.fromRGB(255, 210, 66),
+		Box = Color3.fromRGB(181, 101, 29),
 	},
 	ADMIN_USERIDS = { -- add your userId if you want live reset
 		-- [12345678] = true,

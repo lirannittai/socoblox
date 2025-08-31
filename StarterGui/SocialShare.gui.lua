@@ -1,8 +1,6 @@
 -- GUI + SocialService share (with fallback)
 local Players = game:GetService("Players")
 local SocialService = game:GetService("SocialService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Remotes = require(ReplicatedStorage:WaitForChild("Remotes"))
 
 local player = Players.LocalPlayer
 
@@ -48,9 +46,6 @@ local function doShare()
 	else
 		fallbackFrame.Visible = true
 		msg.Text = gui:GetAttribute("ShareText") or "I won in Sokoban Showdown! Beat my time!"
-		if setclipboard then
-			setclipboard(msg.Text)
-		end
 	end
 end
 
